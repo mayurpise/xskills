@@ -81,13 +81,14 @@ Without this, models either over-apply (making risky changes autonomously) or un
 
 | Mechanism | How it saves tokens |
 |-----------|-------------------|
-| **Diff-scoped, dimension-gated** | Reviews only changed code, and each of the six dimensions runs only when the diff warrants it (silent-failure pass only if error handling changed, type-design only if a type changed). Unwarranted passes are never spent. |
+| **Diff-scoped, dimension-gated** | Reviews only changed code, and each conditional dimension runs only when the diff warrants it (silent-failure pass only if error handling changed, type-design only if a type changed). Unwarranted passes are never spent. |
+| **Risk-ranked units in audit mode** | Audit mode is inferred from the request, not switched on by a flag — the model already knows whether it was asked about a change or about the code itself, so a mode switch would only add a way to get it wrong. It lifts the diff bound for brownfield code, but never reads a repo file-by-file: it inventories, ranks units by trust boundary / churn / untested surface, and reviews highest-risk first — so a truncated budget cuts the least valuable work, and the report names what it skipped. |
 | **Validate-then-filter before output** | Candidate bugs are re-checked and everything under 80 confidence is dropped *before* the report is written, so tokens aren't spent describing findings that won't survive. |
 | **One structured report shape** | Fixed Critical / Important / Suggestions / Strengths schema prevents format improvisation across runs and keeps the output parseable. |
 
 **Steering Better Decisions**
 
-**Two disciplines merged.** Broad coverage (six dimensions catch whole classes of defect — bugs, CLAUDE.md compliance, silent failures, test gaps, comment rot, weak type invariants) is paired with a strict validation gate. Coverage without the gate is noisy; the gate without coverage is narrow. Together they produce a report that is both wide and trustworthy.
+**Two disciplines merged.** Broad coverage (nine dimensions catch whole classes of defect — bugs, security, performance, CLAUDE.md compliance, silent failures, test gaps, comment rot, weak type invariants, needless complexity) is paired with a strict validation gate. Coverage without the gate is noisy; the gate without coverage is narrow. Together they produce a report that is both wide and trustworthy.
 
 **Adversarial validation as the trust mechanism.** Every bug, silent-failure, and CLAUDE.md candidate is re-checked with a refute-by-default pass that must state a concrete failure (which inputs → what wrong result) before the finding survives. This directly targets the plausible-but-wrong finding that erodes reviewer trust — the failure mode that makes teams ignore automated review.
 
