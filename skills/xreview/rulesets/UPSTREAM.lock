@@ -2,7 +2,7 @@
 upstream: https://github.com/alibaba/open-code-review
 license:  Apache-2.0
 ref:      main
-commit:   c60e88650af19c0500527e2fe528e31059b4b5e1
+commit:   62e2b9979843a6c9e5ec66047d54acc87295df23
 rules:
   - default.md
   - python.md
