@@ -53,12 +53,16 @@ That's it. One command installs every skill under `skills/` and copies the agent
 `skills/xreview/rulesets/` holds verbatim, Apache-2.0 rulesets mirrored from
 [alibaba/open-code-review](https://github.com/alibaba/open-code-review), **bundled with the
 `xreview` skill** so they install alongside it. Do not edit them — `scripts/sync-upstream.sh`
-refreshes them at a pinned commit, and a `pre-push` hook runs it when you push `main`, blocking
-the push if they drifted so you commit the update first.
+manages them, pinned to the commit recorded in `rulesets/UPSTREAM.lock`.
+
+The pin is the default, so a routine run (including the `pre-push` hook) only verifies the
+mirror still matches it; it never pulls unreviewed upstream code into the repo. Moving the pin
+is a deliberate act — pass `REF` explicitly, then commit the result.
 
 ```bash
-git config core.hooksPath hooks   # enable the hook (one-time, per clone)
-scripts/sync-upstream.sh          # manual refresh; edit the RULES list to change coverage
+git config core.hooksPath hooks     # enable the hook (one-time, per clone)
+scripts/sync-upstream.sh            # verify against the pin; edit the RULES list to change coverage
+REF=main scripts/sync-upstream.sh   # move the pin to upstream main, for review
 ```
 
 ## Docs

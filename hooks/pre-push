@@ -16,7 +16,7 @@ done
 
 set +e; "$sync"; code=$?; set -e
 case $code in
-  3) echo "pre-push: upstream mirror updated — commit vendor/open-code-review, then push again." >&2; exit 1 ;;
+  3) echo "pre-push: upstream mirror updated — commit skills/xreview/rulesets, then push again." >&2; exit 1 ;;
   2) echo "pre-push: upstream sync skipped (offline/fetch error); pushing anyway." >&2; exit 0 ;;
   *) exit 0 ;;
 esac

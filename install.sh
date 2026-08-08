@@ -55,8 +55,10 @@ HOOK_DEST="$HOME/.claude/hooks/work-tracker-sessionstart.sh"
 
 CURSOR_FRONTMATTER='---\ndescription: Project-level coding and agent guidelines\nalwaysApply: true\n---\n\n'
 
+# Print the Usage block from this file's header. Matched by pattern, not line
+# numbers, so editing the header cannot silently truncate the output.
 print_usage() {
-  sed -n '6,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '/^# Usage:/,/^#$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 # Membership test: has <needle> <list...>
@@ -77,9 +79,10 @@ backup_if_exists() {
 }
 
 # Copy src→dest idempotently: skip if identical, overwrite otherwise.
-# Repo-sourced targets (skills, hook, global config) are git-recoverable, so no
-# backup is kept. Pass a non-empty 4th arg to back up first — used only when
-# writing into a foreign project dir that may hold the user's own file.
+# Skills and the hook are ours to own — the destination only ever holds a previous
+# copy of this repo's file, so no backup is kept. Pass a non-empty 4th arg to back
+# up first, required anywhere the destination may hold a file the user wrote:
+# project dirs and the global config paths (~/.claude/CLAUDE.md et al).
 # Portable same-file/same-content handling via cmp (no realpath dependency).
 install_file() {
   local src="$1" dest="$2" label="$3" backup="${4:-}"
@@ -168,10 +171,10 @@ install_claude_hook() {
 # Install config to each targeted tool's global home dir.
 install_config_global() {
   if has claude "$@"; then
-    install_file "$AGENTS_SRC" "$CLAUDE_CONFIG" "config Claude Code"
+    install_file "$AGENTS_SRC" "$CLAUDE_CONFIG" "config Claude Code" backup
   fi
   if has cursor "$@"; then
-    install_cursor_config "$CURSOR_CONFIG"
+    install_cursor_config "$CURSOR_CONFIG" backup
   fi
   if has copilot "$@"; then
     echo "  ! config Copilot    → project-level only; use --config <dir>"
@@ -198,10 +201,8 @@ install_config_project() {
 do_cursor=0; do_claude=0; do_copilot=0; do_all=0
 do_config=0; config_dir=""
 
-i=1
-while [[ $i -le $# ]]; do
-  arg="${!i}"
-  case "$arg" in
+while [[ $# -gt 0 ]]; do
+  case "$1" in
     --cursor)  do_cursor=1 ;;
     --claude)  do_claude=1 ;;
     --copilot) do_copilot=1 ;;
@@ -209,19 +210,19 @@ while [[ $i -le $# ]]; do
     -h|--help) print_usage; exit 0 ;;
     --config)
       do_config=1
-      next=$(( i + 1 ))
-      if [[ $next -le $# && "${!next}" != --* ]]; then
-        config_dir="${!next}"
-        i=$next
+      # An optional directory may follow; anything starting with - is the next flag.
+      if [[ $# -gt 1 && "$2" != -* ]]; then
+        config_dir="$2"
+        shift
       fi
       ;;
     *)
-      echo "Unknown flag: $arg"
+      echo "Unknown flag: $1"
       print_usage
       exit 1
       ;;
   esac
-  i=$(( i + 1 ))
+  shift
 done
 
 # --- resolve target tools (explicit > --all > detection) ---

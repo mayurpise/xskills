@@ -4,10 +4,15 @@
 # upstream mirrors — do NOT edit; re-fetching the same SHA is byte-identical. Because
 # they live under skills/xreview/, install.sh ships them alongside the skill.
 #
+# The pin is the commit recorded in UPSTREAM.lock, and it is the default so that a
+# routine run — including the pre-push hook — can never pull unreviewed upstream code
+# into the repo. Moving the pin is a deliberate act: pass REF explicitly.
+#
 # Usage:
-#   scripts/sync-upstream.sh          # resolve REF -> SHA, fetch, write, report
+#   scripts/sync-upstream.sh          # verify against the pinned commit in UPSTREAM.lock
 #   scripts/sync-upstream.sh --check  # report drift only, write nothing (CI/hook dry-run)
-#   REF=<sha|tag|branch> scripts/sync-upstream.sh   # hard-pin to a specific ref
+#   REF=main scripts/sync-upstream.sh # move the pin to upstream main's current HEAD
+#   REF=<sha|tag|branch> scripts/sync-upstream.sh   # move the pin to a specific ref
 #
 # Exit codes: 0 = up to date, 3 = changed (drift), 2 = network/fetch error.
 # Deps: git, curl (no jq/gh).
@@ -15,7 +20,7 @@
 set -euo pipefail
 
 UPSTREAM="alibaba/open-code-review"
-REF="${REF:-main}"
+explicit_ref="${REF:-}"
 DEST="skills/xreview/rulesets"
 RULE_PREFIX="internal/config/rules/rule_docs"
 
@@ -26,12 +31,26 @@ check_only=0
 [[ "${1:-}" == "--check" ]] && check_only=1
 
 cd "$(git rev-parse --show-toplevel)"
+LOCK="$DEST/UPSTREAM.lock"
+
+# No explicit REF -> re-verify the recorded pin, and keep the lock's ref label so a
+# routine run does not rewrite it. Explicit REF -> that ref becomes the new pin.
+if [[ -z "$explicit_ref" && -f "$LOCK" ]]; then
+  REF="$(awk '$1=="commit:"{print $2}' "$LOCK")"
+  ref_label="$(awk '$1=="ref:"{print $2}' "$LOCK")"
+else
+  REF="${explicit_ref:-main}"
+  ref_label="$REF"
+fi
+[[ -n "$REF" ]] || { echo "sync-upstream: no pin in $LOCK and no REF given" >&2; exit 2; }
 
 # Resolve REF -> commit SHA (deterministic pin). A 40-hex REF is used as-is.
+# `|| sha=""` keeps a failed ls-remote (offline) from aborting under `set -e` before
+# the guard below can report it as the documented exit-2 network error.
 if [[ "$REF" =~ ^[0-9a-f]{40}$ ]]; then
   sha="$REF"
 else
-  sha="$(git ls-remote "https://github.com/$UPSTREAM" "$REF" 2>/dev/null | cut -f1)"
+  sha="$(git ls-remote "https://github.com/$UPSTREAM" "$REF" 2>/dev/null | cut -f1)" || sha=""
 fi
 [[ -n "${sha:-}" ]] || { echo "sync-upstream: could not resolve $UPSTREAM@$REF (offline?)" >&2; exit 2; }
 
@@ -59,11 +78,11 @@ if [[ $check_only -eq 0 ]]; then
     echo "# Verbatim upstream mirror — do not edit. Managed by scripts/sync-upstream.sh."
     echo "upstream: https://github.com/$UPSTREAM"
     echo "license:  Apache-2.0"
-    echo "ref:      $REF"
+    echo "ref:      $ref_label"
     echo "commit:   $sha"
     echo "rules:"
     printf '  - %s\n' "${RULES[@]}"
-  } > "$DEST/UPSTREAM.lock"
+  } > "$LOCK"
 fi
 
 if [[ $changed -eq 1 ]]; then
