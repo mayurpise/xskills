@@ -48,7 +48,7 @@ The command takes no mode switch. `/xreview` figures out what to review from the
 
 ## Phase 0S — xsecurity on the change set (default on)
 
-Deep security for the same change set this review is about. Runs by default; skipped only under the rules below.
+Deep security for the **same change set this review is about** — including uncommitted work. Most local reviews are pre-commit; xsecurity must match that, not only committed history. Runs by default; skipped only under the rules below.
 
 ### When to skip (do not ask — decide and note in the report)
 
@@ -56,20 +56,22 @@ Skip Phase 0S entirely when any of these hold, and state the reason in one line 
 
 1. `--no-xsecurity` was given.
 2. Mode is **audit** (no change set).
-3. There is no committed change set xsecurity can scan (xsecurity scans only committed history — uncommitted working-tree edits alone are not enough). Prefer: branch commits ahead of a resolvable base, a PR's base..head, or a single commit under review. If the review is pure uncommitted work and there is no last commit either, skip.
+3. There is **nothing to scan**: no staged/unstaged/untracked changes, no last commit, and no PR/branch range. (Empty working tree + empty history.)
 4. The xsecurity skill (or its installed alias `claude-security`) is not present in this session and cannot be loaded — fall back to the Phase 2 `security` dimension only and note "xsecurity not available".
 
 ### Resolve the xsecurity target from Phase 0
 
-Map once; do not open xsecurity's front-desk menu or its "which change" sub-menu — the target is already decided:
+Map once so xsecurity scans **what xreview is reviewing**. Do not open xsecurity's front-desk menu or its "which change" sub-menu — the target is already decided:
 
 | xreview scope | xsecurity scan-changes target |
 |---------------|-------------------------------|
+| **Local, non-empty working diff** (staged and/or unstaged and/or untracked — the usual pre-commit case) | **`--working-tree`** — same uncommitted set against `HEAD` |
+| Local, empty working diff, reviewing the last commit | `--commit HEAD` (or the commit being reviewed) |
+| Local, empty working diff, branch has commits ahead of a resolvable base and you fell through to that range | Branch changes since that base (`--base <ref>`) |
 | PR mode | That PR's changes: base ref → head (branch range, or the PR's local checkout against `baseRefName`) |
-| Local, branch has commits ahead of a resolvable base (`upstream` / `origin/HEAD` / `origin/main` / `origin/master` / `main` / `master`) | Branch changes since that base |
-| Local, reviewing the last commit only (empty working diff, or no branch-ahead range) | `--commit HEAD` (or the commit being reviewed) |
 | Path-scoped change set | Same as above, plus `--scope <path>` when the path is a real directory under the repo |
-| Pure uncommitted working tree, nothing committed to scan | **Skip** — note that xsecurity needs committed changes |
+
+**Priority for local mode:** if the working tree has any reviewable change (staged, unstaged, or untracked), always use `--working-tree` — do **not** substitute a branch-ahead range or last-commit scan and leave the uncommitted edits out. That matches what xreview itself is reading.
 
 Effort: **medium** (xsecurity default). Small diffs still take xsecurity's fast single-researcher path when the job's size rules fire.
 
@@ -78,13 +80,15 @@ Effort: **medium** (xsecurity default). Small diffs still take xsecurity's fast 
 Prefer the lightest path that actually runs the scan-changes job end to end. Try in order:
 
 1. **Skill / slash.** Invoke the installed `xsecurity` skill (or `claude-security` if that is what is installed) with a **direct job request** — no menu — that names the target and carries the cost acknowledgment, e.g.  
-   `scan changes --base <ref>` / `scan changes --commit <sha>` / `scan this branch's changes since <base>`  
+   `scan changes --working-tree` / `scan changes --base <ref>` / `scan changes --commit <sha>` / `scan uncommitted working-tree changes`  
    plus the fixed words: *"I understand it may take a while and use a significant number of tokens."*  
    If a path scope applies, pass it as `--scope`.
 2. **Orchestrator agent.** Spawn the `xsecurity` / `claude-security` orchestrator agent with the same direct job request and cost acknowledgment. Do not ask it to open a menu.
-3. **Inline recipe.** Read the skill's `jobs/scan-changes.md` (from the installed skill dir, or `${CLAUDE_PLUGIN_ROOT}/skills/claude-security/jobs/scan-changes.md` / `…/xsecurity/jobs/scan-changes.md`) and execute that recipe yourself in this session. Skip its sub-menu and its step-3 cost confirmation — both are already resolved by this phase. Still follow the rest of the recipe (range sizing, workflow, report directory, delivery).
+3. **Inline recipe.** Read the skill's `jobs/scan-changes.md` (from the installed skill dir, or `${CLAUDE_PLUGIN_ROOT}/skills/claude-security/jobs/scan-changes.md` / `…/xsecurity/jobs/scan-changes.md`) and execute that recipe yourself in this session. Skip its sub-menu and its step-3 cost confirmation — both are already resolved by this phase. Still follow the rest of the recipe (range sizing including working-tree sizing, workflow, report directory, delivery).
 
 Never invent a parallel security pipeline. If none of the three paths can run, skip and note why.
+
+Working-tree scans produce a dirty-stamped report: fold findings into the review as usual, but do not promise automated patch files from the fix job until the user has committed.
 
 ### Interaction with the Phase 2 `security` dimension
 
@@ -211,8 +215,8 @@ Always output to the terminal in this shape. If nothing survived, say so plainly
 - [<category>] <file>:<line> — <suggestion>.
 
 ### Security scan (xsecurity)
-- <ran: range / effort / N findings / report path XSECURITY-… / verification.status>
-  OR <skipped: --no-xsecurity | audit mode | no committed change set | skill unavailable — <detail>>
+- <ran: working-tree | branch range | commit / effort / N findings / report path XSECURITY-… / verification.status>
+  OR <skipped: --no-xsecurity | audit mode | nothing to scan | skill unavailable — <detail>>
   OR <still running: where to watch progress>
 
 ### Strengths

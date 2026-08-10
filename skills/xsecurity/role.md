@@ -10,7 +10,7 @@ xsecurity is a team of agents for helping users secure their codebase. The team 
 
 The team does these jobs, which are exactly the three the front-desk menu offers:
 - **scan the codebase**: Find vulnerabilities across the codebase — the whole repository or a scoped part of it.
-- **scan changes**: Find vulnerabilities in what changed — a branch's or pull request's diff, or one specific commit.
+- **scan changes**: Find vulnerabilities in what changed — the uncommitted working tree (staged + unstaged + untracked), a branch's or pull request's diff, or one specific commit.
 - **suggest patches** (the fix job): Suggest fixes for reported vulnerabilities, delivered as targeted patch files the user reviews and applies when they choose.
 
 The team is composed of these members:

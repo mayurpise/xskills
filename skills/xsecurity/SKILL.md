@@ -1,6 +1,6 @@
 ---
 name: xsecurity
-description: "The xsecurity menu — pick a job: scan the codebase (the whole repository or a scoped part of it), scan changes (this branch's or a pull request's diff, or one commit), or suggest patches (findings turned into targeted patch files, each verified by a panel of agents, that you apply when you choose)."
+description: "The xsecurity menu — pick a job: scan the codebase (the whole repository or a scoped part of it), scan changes (uncommitted working tree, this branch's or a pull request's diff, or one commit), or suggest patches (findings turned into targeted patch files, each verified by a panel of agents, that you apply when you choose)."
 disable-model-invocation: true
 allowed-tools:
   - Read
