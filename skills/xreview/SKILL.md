@@ -1,19 +1,22 @@
 ---
 name: xreview
-description: "Review a GitHub pull request, the local working diff, or existing code for high-signal issues across nine dimensions — bugs and logic, security, performance, CLAUDE.md compliance, silent failures, test coverage, comment accuracy, type design, and simplification — then independently validate every candidate finding before reporting so false positives are filtered out. Infers its own scope: diff when there are changes to review, whole-code audit when the request or the repo state calls for one. Terminal report by default; posts inline PR comments only with --comment. Use when the user says 'review this', 'review my changes', 'review the PR', 'code review', 'check my diff', 'review before I commit', 'audit this codebase', 'review the whole repo', 'audit this module', 'brownfield review', '/xreview', or before opening or merging a pull request."
+description: "Review a GitHub pull request, the local working diff, or existing code for high-signal issues across nine dimensions — bugs and logic, security, performance, CLAUDE.md compliance, silent failures, test coverage, comment accuracy, type design, and simplification — then independently validate every candidate finding before reporting so false positives are filtered out. By default also runs the xsecurity scan-changes job on the resolved change set (opt out with --no-xsecurity). Infers its own scope: diff when there are changes to review, whole-code audit when the request or the repo state calls for one. Terminal report by default; posts inline PR comments only with --comment. Use when the user says 'review this', 'review my changes', 'review the PR', 'code review', 'check my diff', 'review before I commit', 'audit this codebase', 'review the whole repo', 'audit this module', 'brownfield review', '/xreview', or before opening or merging a pull request."
 ---
 
 # xreview: High-Signal Code Review
 
 Review changed code and report **only issues that survive validation**. Two disciplines, merged: broad multi-dimension coverage (catch whole classes of defect), and a strict validate-then-filter gate (every candidate is re-checked against the real code before it reaches the report). A false positive erodes trust and wastes reviewer time — quality over quantity, always.
 
+On every **change-set** review (local or PR mode), also run **xsecurity scan-changes** against that same change set by default — deep, panel-verified security on what changed, not just the lightweight `security` dimension.
+
 ## Operating assumptions
 
 - Every tool call has a clear purpose. Do not make exploratory or test calls.
 - **Diff mode (default):** review only **changed** code — the diff and its immediate context. Do not audit the whole codebase or flag pre-existing issues the change did not introduce.
-- **Audit mode:** the scope is existing code, not a diff. Pre-existing issues are the *point*; the "changed code only" rule and the pre-existing-issue filter are lifted for that run. Every other discipline — validation gate, confidence bands, smallest-diff fixes, false-positive suppression — is unchanged. The mode is **inferred, never flagged** (Phase 0).
+- **Audit mode:** the scope is existing code, not a diff. Pre-existing issues are the *point*; the "changed code only" rule and the pre-existing-issue filter are lifted for that run. Every other discipline — validation gate, confidence bands, smallest-diff fixes, false-positive suppression — is unchanged. The mode is **inferred, never flagged** (Phase 0). **xsecurity is not launched in audit mode** (no change set); the lightweight `security` dimension still runs when the unit warrants it.
 - **Fixes follow the smallest diff.** Every fix or suggestion you propose must itself obey the `minimalist` skill: the smallest change that resolves the issue, with no new abstraction, configuration, or defensive code the fix does not require.
-- **Execution model:** if your tool can launch parallel subagents (e.g. Claude Code's Agent/Task tool), dispatch the change summary and each applicable dimension in Phase 2 as parallel agents, and validate findings in parallel in Phase 3. If not, perform each pass yourself in sequence. The phases and gates below are identical either way.
+- **Execution model:** if your tool can launch parallel subagents (e.g. Claude Code's Agent/Task tool), dispatch the change summary and each applicable dimension in Phase 2 as parallel agents, and validate findings in parallel in Phase 3. If not, perform each pass yourself in sequence. The phases and gates below are identical either way. When Phase 0S launches xsecurity, run it **in parallel** with Phases 1–4 — do not block the rest of the review on the scan finishing.
+- **Cost acknowledgment (embedded).** Invoking `/xreview` without `--no-xsecurity` is the user's acceptance that the embedded xsecurity change-set scan may take a while and use a significant number of tokens. When you call into xsecurity, pass that acknowledgment through so its start-confirmation is already satisfied — never re-ask the scan cost question yourself, and never invent a second confirmation for the same run.
 
 ## Invocation
 
@@ -21,12 +24,13 @@ The command takes no mode switch. `/xreview` figures out what to review from the
 
 | Command | Behavior |
 |---------|----------|
-| `/xreview` | Review the local working diff (staged + unstaged + untracked). If the diff is empty, review the last commit. If there is nothing to review either way, audit the repo. |
-| `/xreview <PR>` | PR mode. Review the given GitHub PR (number or URL) via `gh`. |
-| `/xreview <path>` | Scope to that file or directory. If it has changes in the working diff, review those; if it has none, audit the code there. |
+| `/xreview` | Review the local working diff (staged + unstaged + untracked). If the diff is empty, review the last commit. If there is nothing to review either way, audit the repo. Also runs xsecurity on the resolved change set (Phase 0S). |
+| `/xreview <PR>` | PR mode. Review the given GitHub PR (number or URL) via `gh`. Also runs xsecurity on that PR's changes. |
+| `/xreview <path>` | Scope to that file or directory. If it has changes in the working diff, review those; if it has none, audit the code there. xsecurity runs only when the scope resolved to a change set (and is scoped to that path when the job accepts `--scope`). |
 | `/xreview --comment` | PR mode only. Post findings as inline PR comments (default is terminal-only). |
+| `/xreview --no-xsecurity` | Skip the embedded xsecurity scan-changes job. The lightweight Phase 2 `security` dimension still runs when warranted. |
 
-`--comment` is the only flag, and it stays one because it writes to GitHub — a side effect must be asked for, never inferred. Everything else is inferred from the request and the repo state.
+`--comment` and `--no-xsecurity` are the only flags. `--comment` stays opt-in because it writes to GitHub. `--no-xsecurity` is opt-out of the default deep security scan. Everything else is inferred from the request and the repo state.
 
 ## Phase 0 — Scope and skip check
 
@@ -40,6 +44,56 @@ The command takes no mode switch. `/xreview` figures out what to review from the
 2. **Skip conditions (PR mode).** Stop and report the reason without reviewing if the PR is closed, is a draft, is trivial/automated (e.g. dependency bump, generated lockfile), or you have already left a review on it (`gh pr view <PR> --comments`). Still review PRs authored by an AI.
 3. **Gather guideline files.** Collect paths (not contents yet) of every relevant `CLAUDE.md`: the repo root one, plus any in a directory containing a file in scope. A `CLAUDE.md` governs a file **only** if it shares that file's path or a parent of it.
 4. **Summarize the change.** Produce a short summary of what changed and the author's intent (PR title/description in PR mode; commit messages or the diff itself in local mode; in audit mode, what the code in scope is *for* — see Phase 0A). Pass this summary to every downstream pass — intent context prevents false positives.
+5. **Launch xsecurity when warranted (Phase 0S).** After the mode and scope are fixed, run Phase 0S. Do not wait for it to finish before starting Phase 1.
+
+## Phase 0S — xsecurity on the change set (default on)
+
+Deep security for the same change set this review is about. Runs by default; skipped only under the rules below.
+
+### When to skip (do not ask — decide and note in the report)
+
+Skip Phase 0S entirely when any of these hold, and state the reason in one line in the Phase 5 report under **Security scan (xsecurity)**:
+
+1. `--no-xsecurity` was given.
+2. Mode is **audit** (no change set).
+3. There is no committed change set xsecurity can scan (xsecurity scans only committed history — uncommitted working-tree edits alone are not enough). Prefer: branch commits ahead of a resolvable base, a PR's base..head, or a single commit under review. If the review is pure uncommitted work and there is no last commit either, skip.
+4. The xsecurity skill (or its installed alias `claude-security`) is not present in this session and cannot be loaded — fall back to the Phase 2 `security` dimension only and note "xsecurity not available".
+
+### Resolve the xsecurity target from Phase 0
+
+Map once; do not open xsecurity's front-desk menu or its "which change" sub-menu — the target is already decided:
+
+| xreview scope | xsecurity scan-changes target |
+|---------------|-------------------------------|
+| PR mode | That PR's changes: base ref → head (branch range, or the PR's local checkout against `baseRefName`) |
+| Local, branch has commits ahead of a resolvable base (`upstream` / `origin/HEAD` / `origin/main` / `origin/master` / `main` / `master`) | Branch changes since that base |
+| Local, reviewing the last commit only (empty working diff, or no branch-ahead range) | `--commit HEAD` (or the commit being reviewed) |
+| Path-scoped change set | Same as above, plus `--scope <path>` when the path is a real directory under the repo |
+| Pure uncommitted working tree, nothing committed to scan | **Skip** — note that xsecurity needs committed changes |
+
+Effort: **medium** (xsecurity default). Small diffs still take xsecurity's fast single-researcher path when the job's size rules fire.
+
+### How to call xsecurity
+
+Prefer the lightest path that actually runs the scan-changes job end to end. Try in order:
+
+1. **Skill / slash.** Invoke the installed `xsecurity` skill (or `claude-security` if that is what is installed) with a **direct job request** — no menu — that names the target and carries the cost acknowledgment, e.g.  
+   `scan changes --base <ref>` / `scan changes --commit <sha>` / `scan this branch's changes since <base>`  
+   plus the fixed words: *"I understand it may take a while and use a significant number of tokens."*  
+   If a path scope applies, pass it as `--scope`.
+2. **Orchestrator agent.** Spawn the `xsecurity` / `claude-security` orchestrator agent with the same direct job request and cost acknowledgment. Do not ask it to open a menu.
+3. **Inline recipe.** Read the skill's `jobs/scan-changes.md` (from the installed skill dir, or `${CLAUDE_PLUGIN_ROOT}/skills/claude-security/jobs/scan-changes.md` / `…/xsecurity/jobs/scan-changes.md`) and execute that recipe yourself in this session. Skip its sub-menu and its step-3 cost confirmation — both are already resolved by this phase. Still follow the rest of the recipe (range sizing, workflow, report directory, delivery).
+
+Never invent a parallel security pipeline. If none of the three paths can run, skip and note why.
+
+### Interaction with the Phase 2 `security` dimension
+
+- **xsecurity launched:** skip the Phase 2 `security` dimension for this run — the deep scan owns vulnerability classes. Still fold any obvious injection/secret issues you notice during other dimensions into validation if xsecurity has not returned yet; de-duplicate by file:line at Phase 5.
+- **xsecurity skipped:** run the Phase 2 `security` dimension under its normal "Run when" rule.
+
+### When the scan returns
+
+Fold panel-surviving findings into the Phase 5 report under **Security scan (xsecurity)** (and into Critical/Important when severity warrants, labeled `[security]` / `[xsecurity]`). Point at the `XSECURITY-<timestamp>/` report path. Do not re-validate xsecurity's panel-verified findings with Phase 3 — they already passed an adversarial panel. Do not re-run xsecurity to "double check." If the scan is still running when Phases 1–4 finish, deliver the review report first, then append the security section when the scan lands (or state that it is still running and where progress will appear).
 
 ## Phase 0A — Audit mode scoping (audit mode only)
 
@@ -67,7 +121,7 @@ Run only the dimensions the scope warrants. In **audit mode**, read each "Run wh
 | **Test coverage** | New behavior/logic was added, or test files changed | `test-gap` |
 | **Comment accuracy** | Comments, docstrings, or docs were added or modified | `comment` |
 | **Type design** | A type/interface/data model was added or materially changed | `type-design` |
-| **Security** | The diff touches input handling, auth/permissions, secrets, serialization, SQL/queries, HTML/templating, file/path ops, or crypto | `security` |
+| **Security** | The diff touches input handling, auth/permissions, secrets, serialization, SQL/queries, HTML/templating, file/path ops, or crypto — **and** Phase 0S did not launch xsecurity (when xsecurity runs, it owns this class; see Phase 0S) | `security` |
 | **Performance** | The diff adds loops over collections, DB/network calls, allocations on a hot path, or resource acquisition | `perf` |
 | **Simplification** | Always | `simplify` |
 
@@ -109,7 +163,7 @@ Cross-check changed comments/docstrings against the code they describe. Flag: co
 For new/changed types, assess whether illegal states are representable, whether invariants are enforced at construction and every mutation, and whether internals leak. Flag: anemic models, exposed mutable internals, invariants enforced only by documentation, missing constructor validation. Suggest the smallest change that closes the gap — do not propose over-engineered type gymnastics. Advisory unless a missing invariant causes a concrete `bug`.
 
 ### Security (`security`)
-Flag only vulnerabilities **introduced by the diff** and provable from the changed code plus immediate context: injection (SQL/command/template), XSS or unescaped output, secrets/credentials committed or logged, missing or incorrect authorization on a changed path, unsafe deserialization, path traversal, weak or misused crypto. State the attack path — what untrusted input reaches what sink. Overlaps `bug`; prefer `security` for these vulnerability classes. Do not raise generic hardening the diff did not necessitate. Validated in Phase 3.
+**Skip this pass when Phase 0S launched xsecurity** — the deep scan-changes job owns vulnerability classes for the change set. When xsecurity was skipped, flag only vulnerabilities **introduced by the diff** and provable from the changed code plus immediate context: injection (SQL/command/template), XSS or unescaped output, secrets/credentials committed or logged, missing or incorrect authorization on a changed path, unsafe deserialization, path traversal, weak or misused crypto. State the attack path — what untrusted input reaches what sink. Overlaps `bug`; prefer `security` for these vulnerability classes. Do not raise generic hardening the diff did not necessitate. Validated in Phase 3.
 
 ### Performance (`perf`)
 Flag concrete regressions the diff introduces: an N+1 query, a network/DB call inside a loop, an unbounded allocation or copy on a hot path, a resource (file/connection/lock) acquired but not released. Name the cost and when it bites. Advisory; skip speculative micro-optimization and anything a profiler would be needed to prove.
@@ -156,9 +210,16 @@ Always output to the terminal in this shape. If nothing survived, say so plainly
 ### Suggestions (N)
 - [<category>] <file>:<line> — <suggestion>.
 
+### Security scan (xsecurity)
+- <ran: range / effort / N findings / report path XSECURITY-… / verification.status>
+  OR <skipped: --no-xsecurity | audit mode | no committed change set | skill unavailable — <detail>>
+  OR <still running: where to watch progress>
+
 ### Strengths
 - <what the change does well>
 ```
+
+Always include **Security scan (xsecurity)** on change-set reviews (ran, skipped, or still running). Omit it only in audit mode when Phase 0S was never in play.
 
 In **audit mode**, append a coverage section — an audit is only trustworthy if its blind spots are stated:
 
