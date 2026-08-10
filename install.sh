@@ -116,6 +116,10 @@ install_skills_to_root() {
     # as xreview/rulesets/), preserving relative paths.
     while IFS= read -r -d '' src; do
       local rel="${src#"$skill_dir"}"
+      # Skip bytecode and editor junk; skills only need source + docs.
+      case "$rel" in
+        *__pycache__/*|*.pyc|*.pyo|.DS_Store) continue ;;
+      esac
       install_file "$src" "$dest_root/$name/$rel" "skill  $tool/$name/$rel"
     done < <(find "$skill_dir" -type f -print0)
     installed_any=1
