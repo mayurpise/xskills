@@ -48,6 +48,20 @@ That's it. One command installs every skill under `skills/` and copies the agent
 ./install.sh --config <dir>
 ```
 
+**Install straight from GitHub (no clone):**
+
+`install.sh` copies from the `skills/` tree beside it, so pipe the tarball into `tar` — piping
+the script alone into `bash` will not work.
+
+```bash
+d=$(mktemp -d) && curl -fsSL https://github.com/mayurpise/xskills/archive/refs/heads/main.tar.gz \
+  | tar -xz --strip-components=1 -C "$d" && "$d/install.sh" --config; rm -rf "$d"
+```
+
+Every flag above works the same way. Swap `main` for a tag or commit SHA to pin the version
+(`/archive/<sha>.tar.gz`). A clone is only needed for `scripts/sync-upstream.sh` and the
+`pre-push` hook.
+
 ## Upstream review rulesets
 
 `skills/xreview/rulesets/` holds verbatim, Apache-2.0 rulesets mirrored from
