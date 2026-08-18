@@ -60,6 +60,14 @@ there, and deletes it. Every flag above works the same way — put it after `--`
 with `XSKILLS_TARBALL=https://github.com/mayurpise/xskills/archive/<sha>.tar.gz`. A clone is
 still needed for `scripts/sync-upstream.sh` and the `pre-push` hook.
 
+Tools are detected by their config dir (`~/.claude`, `~/.cursor`, `~/.copilot`), which each tool
+creates on its first run. On a machine where none has been launched yet there is nothing to
+detect — name the tools instead:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mayurpise/xskills/main/install.sh | bash -s -- --all --config
+```
+
 ## Upstream review rulesets
 
 `skills/xreview/rulesets/` holds verbatim, Apache-2.0 rulesets mirrored from

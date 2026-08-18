@@ -16,6 +16,9 @@ Or without cloning — the script fetches the repo into a temp dir and installs 
 curl -fsSL https://raw.githubusercontent.com/mayurpise/xskills/main/install.sh | bash -s -- --config
 ```
 
+Tools are detected by their config dir (`~/.claude`, `~/.cursor`, `~/.copilot`). If none has been
+launched yet there is nothing to detect — swap `--config` for `--all --config`.
+
 See the [repo](https://github.com/mayurpise/xskills) for all options.
 
 ---

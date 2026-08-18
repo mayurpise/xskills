@@ -260,7 +260,10 @@ else
 fi
 
 if [[ ${#tools[@]} -eq 0 ]]; then
-  echo "No supported tools detected. Use --cursor, --claude, --copilot, or --all to install explicitly."
+  echo "No supported tools detected — none of ~/.claude, ~/.cursor, ~/.copilot exists yet."
+  echo "Name the tools explicitly with --cursor, --claude, --copilot, or --all:"
+  echo "  ./install.sh --all --config"
+  echo "  curl -fsSL https://raw.githubusercontent.com/mayurpise/xskills/main/install.sh | bash -s -- --all --config"
   exit 1
 fi
 
