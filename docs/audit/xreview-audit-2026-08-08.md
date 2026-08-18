@@ -1,4 +1,4 @@
-# xreview audit — dotai repo
+# xreview audit — xskills repo
 
 **Date:** 2026-08-08
 **Mode:** audit (inferred — request named the repo with no reference to a change; working tree was clean)
@@ -7,7 +7,7 @@
 
 ## What this code is
 
-`dotai` distributes agent instructions and skills to Claude Code, Cursor, and Copilot.
+`xskills` distributes agent instructions and skills to Claude Code, Cursor, and Copilot.
 The executable surface is 4 shell scripts (369 lines); everything else is markdown consumed
 as agent instructions. Trust and failure boundaries: `install.sh` writes into the user's
 `$HOME` config dirs, `scripts/sync-upstream.sh` fetches third-party code over the network

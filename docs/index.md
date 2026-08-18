@@ -1,22 +1,22 @@
-# dotai
+# xskills
 
 AI coding tool configs that reduce wasted tokens and prevent scope creep — for Claude Code, Cursor, and GitHub Copilot.
 
 ## Install
 
 ```bash
-git clone https://github.com/mayurpise/dotai.git
-cd dotai
+git clone https://github.com/mayurpise/xskills.git
+cd xskills
 ./install.sh --config
 ```
 
-See the [repo](https://github.com/mayurpise/dotai) for all options.
+See the [repo](https://github.com/mayurpise/xskills) for all options.
 
 ---
 
-## Why dotai
+## Why xskills
 
-Why [CLAUDE.md](https://github.com/mayurpise/dotai/blob/main/CLAUDE.md) and the skills under [`skills/`](https://github.com/mayurpise/dotai/tree/main/skills): two levers that shape LLM behavior. **CLAUDE.md** controls _how_ the model responds in every session; the skills control _what_ it does in specific high-risk workflows (`/scrub` for code cleanup, `/xreview` for high-signal review of a PR or diff, `/minimalist` for writing and restructuring code with a minimal diff, `/lean-python-docs` for keeping Python documentation lean, `/work-tracker` for durable cross-session status, `/okr` for objectives and key results above that status). Together they reduce wasted tokens, prevent scope creep, and make outputs reliably actionable.
+Why [CLAUDE.md](https://github.com/mayurpise/xskills/blob/main/CLAUDE.md) and the skills under [`skills/`](https://github.com/mayurpise/xskills/tree/main/skills): two levers that shape LLM behavior. **CLAUDE.md** controls _how_ the model responds in every session; the skills control _what_ it does in specific high-risk workflows (`/scrub` for code cleanup, `/xreview` for high-signal review of a PR or diff, `/minimalist` for writing and restructuring code with a minimal diff, `/lean-python-docs` for keeping Python documentation lean, `/work-tracker` for durable cross-session status, `/okr` for objectives and key results above that status). Together they reduce wasted tokens, prevent scope creep, and make outputs reliably actionable.
 
 ### CLAUDE.md
 

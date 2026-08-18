@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs the dotai skills and/or project config files for supported AI coding tools.
+# Installs the xskills skills and/or project config files for supported AI coding tools.
 # AGENTS.md is the single source of truth; per-tool config files (CLAUDE.md, Cursor,
 # Copilot) are generated at install time.
 # Skills live under skills/<name>/SKILL.md and are installed to each tool's skills dir.
