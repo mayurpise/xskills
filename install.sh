@@ -14,6 +14,8 @@
 #   ./install.sh --config <dir>         # config into a project dir ONLY (no global skills)
 #   ./install.sh --all --config         # skills + global config for all three tools
 #   ./install.sh -h | --help            # show usage
+#   no clone; flags go after `--`:
+#   curl -fsSL https://raw.githubusercontent.com/mayurpise/xskills/main/install.sh | bash -s -- --config
 #
 # Safety: an existing destination is backed up to <file>.bak before it is replaced;
 # files that are already identical are left untouched.
@@ -34,10 +36,24 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 SKILLS_DIR="$SCRIPT_DIR/skills"
 AGENTS_SRC="$SCRIPT_DIR/AGENTS.md"
 SKILL_FILE="SKILL.md"
+
+# Piped (curl … | bash) there is no repo beside the script, only the script itself.
+# Fetch the tree it copies from and hand over to that copy. Override the tarball to
+# install a pinned revision: XSKILLS_TARBALL=…/archive/<sha>.tar.gz
+if [[ ! -d "$SKILLS_DIR" || ! -f "$AGENTS_SRC" ]]; then
+  command -v curl >/dev/null 2>&1 || { echo "xskills: curl is required to install from GitHub" >&2; exit 1; }
+  BOOTSTRAP_DIR="$(mktemp -d)"
+  trap 'rm -rf "$BOOTSTRAP_DIR"' EXIT
+  echo "  ↓ fetching xskills…"
+  curl -fsSL "${XSKILLS_TARBALL:-https://github.com/mayurpise/xskills/archive/refs/heads/main.tar.gz}" \
+    | tar -xz --strip-components=1 -C "$BOOTSTRAP_DIR"
+  bash "$BOOTSTRAP_DIR/install.sh" "$@"   # set -e propagates a failing install
+  exit 0
+fi
 
 # Per-tool skills install roots
 CURSOR_SKILLS_ROOT="$HOME/.cursor/skills"

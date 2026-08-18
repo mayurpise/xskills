@@ -10,12 +10,10 @@ cd xskills
 ./install.sh --config
 ```
 
-Or without cloning (`install.sh` copies from the `skills/` tree beside it, so extract the
-tarball rather than piping the script into `bash`):
+Or without cloning — the script fetches the repo into a temp dir and installs from there:
 
 ```bash
-d=$(mktemp -d) && curl -fsSL https://github.com/mayurpise/xskills/archive/refs/heads/main.tar.gz \
-  | tar -xz --strip-components=1 -C "$d" && "$d/install.sh" --config; rm -rf "$d"
+curl -fsSL https://raw.githubusercontent.com/mayurpise/xskills/main/install.sh | bash -s -- --config
 ```
 
 See the [repo](https://github.com/mayurpise/xskills) for all options.
