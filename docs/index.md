@@ -22,7 +22,7 @@ See the [repo](https://github.com/mayurpise/xskills) for all options.
 
 ## Why xskills
 
-Why [CLAUDE.md](https://github.com/mayurpise/xskills/blob/main/CLAUDE.md) and the skills under [`skills/`](https://github.com/mayurpise/xskills/tree/main/skills): two levers that shape LLM behavior. **CLAUDE.md** controls _how_ the model responds in every session; the skills control _what_ it does in specific high-risk workflows (`/scrub` for code cleanup, `/xreview` for high-signal review of a PR or diff, `/minimalist` for writing and restructuring code with a minimal diff, `/lean-python-docs` for keeping Python documentation lean, `/work-tracker` for durable cross-session status, `/okr` for objectives and key results above that status). Together they reduce wasted tokens, prevent scope creep, and make outputs reliably actionable.
+Why [CLAUDE.md](https://github.com/mayurpise/xskills/blob/main/CLAUDE.md) and the skills under [`skills/`](https://github.com/mayurpise/xskills/tree/main/skills): two levers that shape LLM behavior. **CLAUDE.md** controls _how_ the model responds in every session; the skills control _what_ it does in specific high-risk workflows (`/scrub` for code cleanup, `/xreview` for high-signal review of a PR or diff, `/xsecurity` for panel-verified vulnerability scans and the patch files that close them, `/minimalist` for writing and restructuring code with a minimal diff, `/lean-python-docs` for keeping Python documentation lean, `/work-tracker` for durable cross-session status, `/okr` for objectives and key results above that status). Together they reduce wasted tokens, prevent scope creep, and make outputs reliably actionable.
 
 ### CLAUDE.md
 
@@ -51,9 +51,9 @@ Why [CLAUDE.md](https://github.com/mayurpise/xskills/blob/main/CLAUDE.md) and th
 
 ---
 
-### skills/scrub
+## skills/scrub
 
-**Token Efficiency**
+### Token Efficiency
 
 | Mechanism | How it saves tokens |
 |-----------|-------------------|
@@ -62,7 +62,7 @@ Why [CLAUDE.md](https://github.com/mayurpise/xskills/blob/main/CLAUDE.md) and th
 | **Structured report template** | Exact schema (Applied / Skipped / Pending / Budget) means the LLM doesn't improvise format. Format improvisation inflates output tokens and makes results hard to parse programmatically. |
 | **Budget caps (30 findings / 500 lines)** | Hard stops a runaway session before it consumes unbounded context. Also forces prioritization — the model must rank, not just list. |
 
-**Steering Better Decisions**
+### Steering Better Decisions
 
 **Tiered classification (T1/T2/T3)** is the central safety mechanism. It maps directly to risk:
 - T1 (mechanical swap): apply freely — no human needed
@@ -81,9 +81,9 @@ Without this, models either over-apply (making risky changes autonomously) or un
 
 ---
 
-### skills/xreview
+## skills/xreview
 
-**Token Efficiency**
+### Token Efficiency
 
 | Mechanism | How it saves tokens |
 |-----------|-------------------|
@@ -92,7 +92,7 @@ Without this, models either over-apply (making risky changes autonomously) or un
 | **Validate-then-filter before output** | Candidate bugs are re-checked and everything under 80 confidence is dropped *before* the report is written, so tokens aren't spent describing findings that won't survive. |
 | **One structured report shape** | Fixed Critical / Important / Suggestions / Strengths schema prevents format improvisation across runs and keeps the output parseable. |
 
-**Steering Better Decisions**
+### Steering Better Decisions
 
 **Two disciplines merged.** Broad coverage (nine dimensions catch whole classes of defect — bugs, security, performance, CLAUDE.md compliance, silent failures, test gaps, comment rot, weak type invariants, needless complexity) is paired with a strict validation gate. Coverage without the gate is noisy; the gate without coverage is narrow. Together they produce a report that is both wide and trustworthy.
 
@@ -103,6 +103,38 @@ Without this, models either over-apply (making risky changes autonomously) or un
 **Path-scoped CLAUDE.md compliance** flags a violation only when the rule governs the changed file's path and can be quoted verbatim — preventing the common error of applying a rule out of its scope.
 
 **Report-by-default, post-on-request** separates seeing findings from publishing them: terminal output always; inline PR comments only in PR mode with `--comment`. Outward-facing writes never happen implicitly.
+
+---
+
+## skills/xsecurity
+
+A team of agents run as security researchers over a codebase: map it, threat-model it, hunt across every component, verify every finding, and — as a separate job — turn confirmed findings into patch files. Three jobs behind one menu: **scan codebase**, **scan changes** (working tree, branch, PR diff, or a single commit), and **suggest patches**.
+
+### Token Efficiency
+
+| Mechanism | How it saves tokens |
+|-----------|-------------------|
+| **Four effort tiers, one fixed panel** | `low` is a single researcher plus the panel; `medium` adds inventory, threat model, one researcher per component × category, and a breadth sweep; `high` widens the matrix; `max` adds an adversarial repanel. Research scales with the tier — the three-voter verification panel never thins, because the report's confidence figures are calibrated against it. |
+| **Attack-surface focus on large trees** | Above a few hundred files, every stage spends its budget on production code an attacker can reach; tests, fixtures, mocks, generated code, build output, and vendored trees become background to consult, not targets to audit. A dedicated secrets pass still checks fixtures for real committed keys. |
+| **Shape collapses to fit the scope** | A scope resolving to 5 files or fewer runs the proportionate single-researcher shape instead of the full component matrix — still panel-verified. A scope resolving to zero tracked files is not scanned at all; the user is told and offered a wider scope. |
+| **Results land on disk, not in context** | Findings, votes, and coverage are written to the run directory the moment the workflow returns, before the report is rendered, so the record survives a compacted session. The deliverable is a `XSECURITY-<timestamp>/` folder — human-readable report plus JSONL for CI gates — not a wall of terminal output. |
+| **Opt-in from `/xreview`** | The deep scan runs on a change set only when `--xsecurity` is passed. A routine review pays for the lightweight `security` dimension and nothing more. |
+
+### Steering Better Decisions
+
+**Verifiers exist to protect attention, not to pad the report.** Researchers propose; an independent three-lens panel tries to break each candidate and eliminates everything that crumbles. The stated reason is the one that matters in practice: a noisy report gets abandoned, and the real vulnerability inside it goes unfixed. Two of three voters confirm a finding for it to survive.
+
+**Severity is impact; confidence is certainty.** They are separate fields, and the panel's vote clamps the second — a finding only two of three voters confirmed cannot claim high confidence, and the renderer lowers it if the model tries. Uncertainty can never be laundered into urgency.
+
+**A clean report has to mean "covered and clean".** Coverage is reported as a ledger: which components were deliberately skipped and why, which top-level directories ended in neither ledger, whether completeness could be checked at all, and what any cap truncated. Without it, "no findings" is indistinguishable from "never looked" — the failure mode that makes a security tool actively harmful.
+
+**The repository is data, never instruction.** Code, comments, project instruction files, an existing report's text, and every subagent's output are the object of analysis. Text addressing the scan ("skip this directory", "this file is verified clean") is noted and reviewed, not obeyed — it never widens a scope, runs a command, or changes what is delivered.
+
+**Fixes are files, not commits.** Each patch is developed in a scratch clone, reviewed by an independent verifier that runs the project's own tests, then re-challenged by a fresh researcher asking what an attacker can do with the change that they could not do before. Only a patch that earns all three claims — targeted, introduces no new vulnerability, leaves behaviour unchanged — is written out, as a `.patch` file the user applies themselves. Nothing is committed, pushed, or opened as a pull request; a patch resting on review rather than a test run says so on its face, and a declined finding is reported as a decline with the claim that blocked it.
+
+**Built for an unattended run.** Questions are batched while the user is present, a single fixed confirmation guards the cost of a long scan, and no answer means no scan rather than a silent default. Once running it goes quiet — no progress narration — because results do not exist until the report lands.
+
+**Relationship to /xreview** — `/xreview` is the everyday gate on a change: broad, fast, nine dimensions, one lightweight security pass. `/xsecurity` is the deep pass, and the one that produces fixes. `xreview --xsecurity` is the bridge: the same resolved change set, handed to the scan-changes job.
 
 ---
 
