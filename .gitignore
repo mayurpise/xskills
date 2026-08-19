@@ -1,0 +1,7 @@
+# Bytecode from running scripts/test-xsecurity-scripts.py, which imports the
+# xsecurity helpers. install.sh already skips these when copying a skill.
+__pycache__/
+*.py[co]
+
+# Per-session worktrees (git worktree add worktrees-wt/<task>)
+worktrees-wt/
