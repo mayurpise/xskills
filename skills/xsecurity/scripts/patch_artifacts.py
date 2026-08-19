@@ -39,7 +39,7 @@ import tempfile
 from typing import TYPE_CHECKING, TypedDict, cast
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from render_report import HEX_RE, RenderError, as_map, atomic_write
+from render_report import HEX_RE, RenderError, SEPARATOR_ESCAPES, as_map, atomic_write
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -547,7 +547,9 @@ def index_markdown(units: list[Unit], base: str, report_dir_name: str, report_re
     if declined:
         lines += ["## No patch produced", ""]
         for unit in declined:
-            lines.append(f"- **{unit['id']}** -- {unit['title']}: {unit['decline_reason']}")
+            # decline_reason may be several lines; this one is a bullet.
+            reason = line_field(unit["decline_reason"], f"{unit['id']} decline_reason")
+            lines.append(f"- **{unit['id']}** -- {unit['title']}: {reason}")
         lines.append("")
     lines += [
         "## Applying a patch",
@@ -592,7 +594,8 @@ def jsonl(
             "apply_check": checks.get(unit["id"]),
             "decline_reason": unit["decline_reason"] or None,
         }
-        rows.append(json.dumps(record, ensure_ascii=False, sort_keys=False))
+        line = json.dumps(record, ensure_ascii=False, sort_keys=False)
+        rows.append(line.translate(SEPARATOR_ESCAPES))   # keep one record on one line
     return "\n".join(rows) + ("\n" if rows else "")
 
 

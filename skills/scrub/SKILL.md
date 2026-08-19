@@ -1,24 +1,9 @@
-# Scrub: Code Review and Cleanup
-
-## Installation
-
-This file (`scrub.md`) is stored flat in the repo. Each tool expects it at
-`scrub/SKILL.md` inside its skills directory. Run the install script to copy
-it into place:
-
-```bash
-# Auto-detect installed tools
-./install.sh
-
-# Or target a specific tool
-./install.sh --cursor     # ~/.cursor/skills/scrub/SKILL.md
-./install.sh --claude     # ~/.claude/skills/scrub/SKILL.md
-./install.sh --copilot    # ~/.copilot/skills/scrub/SKILL.md
-./install.sh --all        # all three
-```
-
+---
+name: scrub
+description: "Review a target directory for reuse, quality, and efficiency with three parallel agents, tier every finding by how provable its fix is (mechanical swap, structural refactor, semantic change), then apply them within that safety envelope — Tier 1 and 2 automatically with a typecheck-and-test gate per file, Tier 3 only after you confirm. Skipping needs one of four cited reasons, and every finding surfaced appears in the report as applied or skipped. Use when the user says 'scrub this directory', 'clean up this code', 'apply the cleanup', 'review and fix', 'remove duplication', '/scrub', or wants findings fixed rather than only reported."
 ---
 
+# Scrub: Code Review and Cleanup
 
 Review a target directory for reuse, quality, and efficiency, then **apply every actionable finding** within a defined safety envelope. Skipping is the exception, not the default.
 

@@ -229,7 +229,7 @@ def build_finding(raw: object, index: int, rounds_by_id: JsonMap) -> Finding:
     if ceiling is not None and CONFIDENCE_RANK[confidence] > CONFIDENCE_RANK[ceiling]:
         confidence = ceiling
 
-    raw_line = item.get("line", 0)
+    raw_line = item.get("line") or 0   # an explicit null reads the same as an absent line
     try:
         line = int(raw_line) if isinstance(raw_line, (int, float, str)) else int(str(raw_line))
     except (TypeError, ValueError, OverflowError) as error:
@@ -428,7 +428,6 @@ def verification_summary(
     if researchers_returned is not None:
         summary["researchers_returned"] = researchers_returned
 
-    reportable: list[Finding] = findings
     if not votes_present:
         summary["status"] = "unverified"
         summary["reason"] = (
@@ -454,10 +453,10 @@ def verification_summary(
             f"these findings have no complete {PANEL_VOTER_COUNT}-voter panel round: "
             f"{', '.join(sorted(incomplete))}"
         )
-    elif reportable and panel_quorum != len(reportable):
+    elif findings and panel_quorum != len(findings):
         summary["status"] = "unverified"
         summary["reason"] = (
-            f"{len(reportable) - panel_quorum} of {len(reportable)} reported findings did not "
+            f"{len(findings) - panel_quorum} of {len(findings)} reported findings did not "
             "reach the keep quorum, so the report contains findings the panel rejected"
         )
     elif not findings and not votes.get("rounds") and summary["candidates"]:
@@ -534,12 +533,12 @@ def render(run_dir: str, products_dir: str) -> tuple[list[Finding], Verification
         for i, raw in enumerate(cast("list[object]", findings_raw))
     ]
 
-    seen = {}
+    seen: set[object] = set()
     for finding in findings:
         if finding["id"] in seen:
             msg = "finding id {!r} appears twice in findings.json".format(finding["id"])
             raise RenderError(msg)
-        seen[finding["id"]] = True
+        seen.add(finding["id"])
 
     markdown_path = os.path.join(run_dir, "XSECURITY-RESULTS.md")
     if not os.path.isfile(markdown_path):

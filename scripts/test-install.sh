@@ -51,3 +51,28 @@ if HOME="$fake_home" "$repo/install.sh" --bogus >/dev/null 2>&1; then
 fi
 
 echo "PASS: install.sh argument parsing"
+
+# --- piped install (curl | bash) must fetch xskills, never install $PWD ---
+# Read from stdin the script has no path, so a $PWD-based root resolution silently
+# installs whatever tree the user happens to stand in. XSKILLS_TARBALL points the
+# bootstrap at this repo so the check needs no network.
+decoy="$fake_home/decoy"
+mkdir -p "$decoy/skills/notxskills"
+printf 'NOT XSKILLS\n' > "$decoy/AGENTS.md"
+printf '# not an xskills skill\n' > "$decoy/skills/notxskills/SKILL.md"
+
+tarball="$fake_home/xskills.tar.gz"
+git archive --format=tar.gz --prefix=xskills/ HEAD > "$tarball"
+
+piped_home="$fake_home/piped"; mkdir -p "$piped_home/.claude"
+(cd "$decoy" && HOME="$piped_home" XSKILLS_TARBALL="file://$tarball" \
+   bash -s -- --claude --config < "$repo/install.sh" >/dev/null)
+
+[[ -e "$piped_home/.claude/skills/notxskills" ]] \
+  && fail "piped install took skills from \$PWD instead of fetching xskills"
+grep -qF 'NOT XSKILLS' "$piped_home/.claude/CLAUDE.md" \
+  && fail "piped install wrote \$PWD's AGENTS.md as the global config"
+cmp -s "$repo/AGENTS.md" "$piped_home/.claude/CLAUDE.md" \
+  || fail "piped install did not write the fetched xskills AGENTS.md"
+
+echo "PASS: piped install fetches xskills instead of installing \$PWD"

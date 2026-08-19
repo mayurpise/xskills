@@ -36,15 +36,20 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+# Read from stdin (curl … | bash) bash reports the script as "main", not a path, so
+# SCRIPT_DIR falls back to $PWD. Keep SCRIPT_PATH to tell the two cases apart below.
+SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 SKILLS_DIR="$SCRIPT_DIR/skills"
 AGENTS_SRC="$SCRIPT_DIR/AGENTS.md"
 SKILL_FILE="SKILL.md"
 
 # Piped (curl … | bash) there is no repo beside the script, only the script itself.
-# Fetch the tree it copies from and hand over to that copy. Override the tarball to
-# install a pinned revision: XSKILLS_TARBALL=…/archive/<sha>.tar.gz
-if [[ ! -d "$SKILLS_DIR" || ! -f "$AGENTS_SRC" ]]; then
+# Fetch the tree it copies from and hand over to that copy. Test SCRIPT_PATH first:
+# without it $PWD is searched instead, and any directory that happens to hold a
+# skills/ and an AGENTS.md would be installed in place of xskills. Override the
+# tarball to install a pinned revision: XSKILLS_TARBALL=…/archive/<sha>.tar.gz
+if [[ ! -f "$SCRIPT_PATH" || ! -d "$SKILLS_DIR" || ! -f "$AGENTS_SRC" ]]; then
   command -v curl >/dev/null 2>&1 || { echo "xskills: curl is required to install from GitHub" >&2; exit 1; }
   BOOTSTRAP_DIR="$(mktemp -d)"
   trap 'rm -rf "$BOOTSTRAP_DIR"' EXIT
@@ -74,7 +79,7 @@ CURSOR_FRONTMATTER='---\ndescription: Project-level coding and agent guidelines\
 # Print the Usage block from this file's header. Matched by pattern, not line
 # numbers, so editing the header cannot silently truncate the output.
 print_usage() {
-  sed -n '/^# Usage:/,/^#$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '/^# Usage:/,/^#$/p' "$SCRIPT_PATH" | sed 's/^# \{0,1\}//'
 }
 
 # Membership test: has <needle> <list...>
