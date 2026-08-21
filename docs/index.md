@@ -97,7 +97,7 @@ Without this, models either over-apply (making risky changes autonomously) or un
 
 ### Steering Better Decisions
 
-**Two disciplines merged.** Broad coverage (nine dimensions catch whole classes of defect — bugs, security, performance, CLAUDE.md compliance, silent failures, test gaps, comment rot, weak type invariants, needless complexity) is paired with a strict validation gate. Coverage without the gate is noisy; the gate without coverage is narrow. Together they produce a report that is both wide and trustworthy.
+**Two disciplines merged.** Broad coverage (eleven dimensions catch whole classes of defect — bugs, security, performance, broken contracts and compatibility, concurrency and resource lifecycle, CLAUDE.md compliance, silent failures, test gaps and weakened tests, comment rot, weak type invariants, needless complexity) is paired with a strict validation gate. Coverage without the gate is noisy; the gate without coverage is narrow. Together they produce a report that is both wide and trustworthy.
 
 **Adversarial validation as the trust mechanism.** Every bug, silent-failure, and CLAUDE.md candidate is re-checked with a refute-by-default pass that must state a concrete failure (which inputs → what wrong result) before the finding survives. This directly targets the plausible-but-wrong finding that erodes reviewer trust — the failure mode that makes teams ignore automated review.
 
@@ -137,7 +137,7 @@ A team of agents run as security researchers over a codebase: map it, threat-mod
 
 **Built for an unattended run.** Questions are batched while the user is present, a single fixed confirmation guards the cost of a long scan, and no answer means no scan rather than a silent default. Once running it goes quiet — no progress narration — because results do not exist until the report lands.
 
-**Relationship to /xreview** — `/xreview` is the everyday gate on a change: broad, fast, nine dimensions, one lightweight security pass. `/xsecurity` is the deep pass, and the one that produces fixes. `xreview --xsecurity` is the bridge: the same resolved change set, handed to the scan-changes job.
+**Relationship to /xreview** — `/xreview` is the everyday gate on a change: broad, fast, eleven dimensions, one lightweight security pass. `/xsecurity` is the deep pass, and the one that produces fixes. `xreview --xsecurity` is the bridge: the same resolved change set, handed to the scan-changes job.
 
 ---
 
