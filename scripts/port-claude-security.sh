@@ -22,8 +22,18 @@ CACHE="$HOME/.claude/plugins/cache"
 AGENTS_DEST="$HOME/.claude/agents"
 WORKFLOWS_DEST="$HOME/.claude/workflows"
 
-# Newest installed claude-security version, whichever marketplace it came from.
-SRC="$(find "$CACHE" -mindepth 3 -maxdepth 3 -type d -path '*/claude-security/*' 2>/dev/null | sort -V | tail -1 || true)"
+# The claude-security install the plugin manager actually uses: installed_plugins.json
+# is authoritative (the cache can hold stale rc dirs that sort -V would rank above the
+# release); fall back to the most recently modified cache dir when jq is unavailable.
+SRC=""
+PLUGINS_JSON="$HOME/.claude/plugins/installed_plugins.json"
+if command -v jq >/dev/null 2>&1 && [[ -f "$PLUGINS_JSON" ]]; then
+  SRC="$(jq -r '[.plugins | to_entries[] | select(.key | startswith("claude-security@"))
+                 | .value[].installPath] | first // empty' "$PLUGINS_JSON" 2>/dev/null || true)"
+fi
+if [[ -z "$SRC" || ! -d "$SRC" ]]; then
+  SRC="$(find "$CACHE" -mindepth 3 -maxdepth 3 -type d -path '*/claude-security/*' 2>/dev/null | xargs -r ls -td 2>/dev/null | head -1 || true)"
+fi
 if [[ -z "$SRC" || ! -f "$SRC/workflows/scan.js" || ! -d "$SRC/agents" ]]; then
   echo "  ! engine no claude-security plugin install found under $CACHE"
   echo "           install it in Claude Code (/plugin install claude-security), then run"
