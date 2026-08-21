@@ -8,7 +8,9 @@ exist. For every skills/*/SKILL.md this asserts:
   (b) every skill-relative path its markdown references resolves (against the
       skill dir, else the repo root);
   (c) every backticked cross-skill mention names a real skill directory or an
-      allowlisted external.
+      allowlisted external;
+  (d) xreview's dimension count is the same number in its table, its description,
+      the README, and the site page.
 
 Usage: scripts/test-skill-refs.py   (exit 0 = pass)
 """
@@ -36,6 +38,12 @@ BRAND_CLAUDE = re.compile(r"claude", re.I)
 SCRIPTS_REF = re.compile(r"\bSCRIPTS/([A-Za-z0-9_.-]+\.py)\b")
 CROSS_SKILL = re.compile(r"`([a-z][a-z0-9-]+)` skill")
 
+# xreview states its dimension count in four places; a8c389c exists only because
+# one of them went stale when the table grew. Lock the number to the table.
+DIMENSION_ROW = re.compile(r"^\|\s\*\*[^|]+\*\*\s\|.*\|\s`[a-z-]+`\s\|$", re.M)
+DIMENSION_CLAIM = re.compile(r"\b(eight|nine|ten|eleven|twelve|thirteen)\s+dimensions\b")
+NUMBER_WORDS = {8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve", 13: "thirteen"}
+
 failures: list[str] = []
 
 
@@ -54,6 +62,29 @@ def frontmatter(text: str) -> dict[str, str]:
         if m:
             fields[m.group(1)] = m.group(2).strip().strip("\"'")
     return fields
+
+
+def check_dimension_count() -> None:
+    """xreview's prose must quote the number of rows its dimension table actually has."""
+    skill = SKILLS / "xreview" / "SKILL.md"
+    if not skill.is_file():
+        return
+    rows = len(DIMENSION_ROW.findall(skill.read_text(encoding="utf-8")))
+    expected = NUMBER_WORDS.get(rows)
+    check(expected, f"xreview: dimension table has {rows} rows, outside the range this test words")
+    if not expected:
+        return
+    for rel in ("skills/xreview/SKILL.md", "README.md", "docs/index.md"):
+        path = REPO / rel
+        if not path.is_file():  # docs/ is optional; the skill and README are not
+            check(rel == "docs/index.md", f"{rel}: missing, cannot check the dimension count")
+            continue
+        claims = set(DIMENSION_CLAIM.findall(path.read_text(encoding="utf-8")))
+        check(claims, f"{rel}: states no dimension count; the table has {rows}")
+        check(
+            claims <= {expected},
+            f"{rel}: says {sorted(claims - {expected})} dimensions, table has {rows} ({expected})",
+        )
 
 
 def main() -> int:
@@ -106,12 +137,14 @@ def main() -> int:
                     f"{path.relative_to(REPO)}: xsecurity must not contain the 'claude' brand",
                 )
 
+    check_dimension_count()
+
     if failures:
         print(f"FAIL ({len(failures)}):")
         for f in failures:
             print(f"  - {f}")
         return 1
-    print(f"PASS: {len(skill_dirs)} skills — frontmatter, path refs, cross-skill names")
+    print(f"PASS: {len(skill_dirs)} skills — frontmatter, path refs, cross-skill names, dimension count")
     return 0
 
 
