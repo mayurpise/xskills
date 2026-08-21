@@ -87,11 +87,14 @@ remove it. Deleting must break no test. Present the justification list with the 
 If any fails, revise before presenting. Do not present failing work with caveats.
 
 ## Standards (all types, non-negotiable)
-- Docstrings/comments (Python): comment the WHY not the WHAT — follow the
-  `lean-python-docs` skill. Write no doc line a code-literate reader would already know.
-- pytest: one behavior per test, arrange-act-assert, no logic in tests, fixtures over
+- **Changed code passes the project's own typechecker, linter, and formatter** —
+  resolve them from the repo (CI config, Makefile, package.json, pyproject). The gate
+  covers the changed code; pre-existing violations elsewhere are not yours to sweep (§4).
+- Tests: one behavior per test, arrange-act-assert, no logic in tests, fixtures over
   setup duplication, parametrize over copy-paste, assert on behavior not implementation
-- Type hints on all signatures; passes `mypy --strict`
-- Passes `ruff check` (incl. C901 complexity) and `ruff format`
-- No dead code (`ruff` F401/F841)
+  (pytest terms — apply the project framework's equivalents)
+- No dead code orphaned by the change
+- Python specifics: docstrings/comments follow the `lean-python-docs` skill (WHY not
+  WHAT); type hints on all changed signatures; a Python project with no established
+  tooling defaults to `mypy --strict` + `ruff check` (incl. C901) + `ruff format`
 - One task type per commit (conventional): `feat:`, `fix:`, `refactor:` — never mix
