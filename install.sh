@@ -65,6 +65,11 @@ CURSOR_SKILLS_ROOT="$HOME/.cursor/skills"
 CLAUDE_SKILLS_ROOT="$HOME/.claude/skills"
 COPILOT_SKILLS_ROOT="$HOME/.copilot/skills"
 
+# Skills that depend on Claude Code-only features (allowed-tools, the Workflow and
+# AskUserQuestion tools, ${CLAUDE_SKILL_DIR} preprocessing) — inert in other tools,
+# so they are installed only for Claude.
+CLAUDE_ONLY_SKILLS=(xsecurity)
+
 # Global config install paths
 CURSOR_CONFIG="$HOME/.cursor/rules/project.mdc"
 CLAUDE_CONFIG="$HOME/.claude/CLAUDE.md"
@@ -138,6 +143,10 @@ install_skills_to_root() {
   for skill_dir in "$SKILLS_DIR"/*/; do
     local name; name="$(basename "$skill_dir")"
     [[ -f "$skill_dir$SKILL_FILE" ]] || continue   # a skill dir must have SKILL.md
+    if [[ "$tool" != "Claude Code" ]] && has "$name" "${CLAUDE_ONLY_SKILLS[@]}"; then
+      echo "  - skill  $tool/$name skipped (Claude Code-only)"
+      continue
+    fi
     # Install every file under the skill dir (SKILL.md plus bundled resources such
     # as xreview/rulesets/), preserving relative paths.
     while IFS= read -r -d '' src; do

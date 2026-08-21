@@ -52,6 +52,15 @@ fi
 
 echo "PASS: install.sh argument parsing"
 
+# --- Claude-only skills stay out of other tools' skill dirs ---
+HOME="$fake_home" "$repo/install.sh" --cursor >/dev/null
+[[ -d "$fake_home/.cursor/skills/scrub" ]] \
+  || fail "cursor install missing a portable skill (scrub)"
+[[ -e "$fake_home/.cursor/skills/xsecurity" ]] \
+  && fail "cursor install shipped the Claude-only xsecurity skill"
+
+echo "PASS: Claude-only skills are skipped for non-Claude tools"
+
 # --- piped install (curl | bash) must fetch xskills, never install $PWD ---
 # Read from stdin the script has no path, so a $PWD-based root resolution silently
 # installs whatever tree the user happens to stand in. XSKILLS_TARBALL points the
