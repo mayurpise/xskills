@@ -17,6 +17,13 @@ jobs:
       - uses: actions/checkout@v7
       - run: bash scripts/test-install.sh
 
+  skill-refs:
+    name: skill references
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 scripts/test-skill-refs.py
+
   xsecurity-scripts:
     # The helpers ship to users' machines and claim 3.9 compatibility in their
     # docstrings; run the floor and the current release so the claim stays true.
