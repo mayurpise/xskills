@@ -60,7 +60,7 @@ Why [CLAUDE.md](https://github.com/mayurpise/xskills/blob/main/CLAUDE.md) and th
 
 | Mechanism | How it saves tokens |
 |-----------|-------------------|
-| **Phase 1: scope upfront** | Globs and reads every source file once before agents launch. The three agents share that single read pass instead of each re-globbing and re-reading independently — a 3x cut in file-IO tokens. Also forces the user to confirm the target directory when missing, so agents never wander off-scope. |
+| **Phase 1: scope upfront** | Globs the target once into a file list the three agents receive — no parent read pass, since subagents cannot see the parent's context and read their own material; the parent reads only the files findings actually name, at triage. Also forces the user to confirm the target directory when missing, so agents never wander off-scope. |
 | **Phase 2: three parallel agents** | Wall-clock time cut by ~3x vs sequential. Each agent receives the same file list but focuses on one dimension (reuse / quality / efficiency), preventing cross-contamination that bloats findings. |
 | **Structured report template** | Exact schema (Applied / Skipped / Pending / Budget) means the LLM doesn't improvise format. Format improvisation inflates output tokens and makes results hard to parse programmatically. |
 | **Budget caps (30 findings / 500 lines)** | Hard stops a runaway session before it consumes unbounded context. Also forces prioritization — the model must rank, not just list. |

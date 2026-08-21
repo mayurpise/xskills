@@ -9,13 +9,15 @@ Review a target directory for reuse, quality, and efficiency, then **apply every
 
 ## Phase 1: Identify Target
 
-The user must provide a target directory. Glob all source files under it recursively (e.g., `.py`, `.ts`, `.tsx`, `.rs`, `.go`, `.java` — whatever languages are present). Read each file to build full context before proceeding to Phase 2.
+The user must provide a target directory. If no directory is specified, ask the user which directory to review before proceeding.
 
-If no directory is specified, ask the user which directory to review before proceeding.
+1. **Clean-tree gate.** Run `git status --porcelain -- <target>`. Any output means uncommitted work sits in scope: stop and ask the user to commit or stash it first (or explicitly confirm scrubbing a dirty tree). This gate is what makes the Tier 2 failure revert (`git checkout <file>`) provably safe, and keeps every per-file commit free of work that is not scrub's own.
+2. **Inventory, don't read.** Glob all source files under the target recursively (e.g., `.py`, `.ts`, `.tsx`, `.rs`, `.go`, `.java` — whatever languages are present) and record the list with sizes and languages. Do **not** read the files here: the Phase 2 agents cannot see this session's context and read their own material; the parent reads only the files named in findings, during Phase 3 triage.
+3. **Resolve the validation commands.** From the repo's own config (CI workflow, `Makefile`, `package.json`, `pyproject.toml`, `Cargo.toml`, …), resolve the project's typecheck command and test command once (e.g., `tsc --noEmit` + vitest for TS, `mypy` + `pytest` for Python, `cargo check` + `cargo test` for Rust). These exact commands are what every gate below runs.
 
 ## Phase 2: Launch Three Review Agents in Parallel
 
-Use the Agent tool to launch all three agents concurrently in a single message. Pass each agent the full list of files from Phase 1.
+Use the Agent tool to launch all three agents concurrently in a single message. Pass each agent the full list of files from Phase 1. Review agents are **read-only** — they return findings; only the parent edits files. Where the runner supports model selection, dispatch them on a mid-tier model: each pass is scoped read-and-summarize work, and triage and application stay with the parent.
 
 ### Agent 1: Code Reuse Review
 
@@ -54,7 +56,7 @@ Fix is provably output-preserving. No contract change, no semantic shift.
 - Utility swap where old and new produce identical output (`` `$${x.toFixed(2)}` `` → `formatCurrency(x)` when both yield `$1.23`)
 - Constant hoisting, lifting to module scope
 - `useMemo` / `memo` wrapping when inputs are already stable
-- Dead-code removal (verify zero consumers via grep first)
+- Dead-code removal of module-private symbols (verify zero consumers via grep first); removing an exported/public symbol is a contract change → Tier 3
 - Import consolidation, barrel re-export
 
 **Action:** apply, run typecheck.
@@ -69,7 +71,7 @@ Fix changes code shape but preserves public contract. Callers continue to work w
 - Selector factoring (when callers stay unchanged)
 - Guarding no-op store updates
 
-**Action:** apply per file. After each file, run `tsc --noEmit` and scoped tests. On failure, `git checkout` that file and move the finding to the skip report with category `(b)`.
+**Action:** apply per file. After each file, run the Phase 1 typecheck and scoped test commands. On failure, `git checkout` that file (safe — the Phase 1 clean-tree gate guarantees it holds only scrub's change) and move the finding to the skip report with category `(b)`.
 
 ### Tier 3 — Semantic change (confirm before applying)
 
@@ -116,8 +118,8 @@ Each file's fixes commit independently with a conventional message (`refactor(sc
 ### Gates
 
 - Before applying any Tier 2/3 finding: confirm a test covers the changed surface. If none exists and one cannot be cheaply added, skip as `(d)` — do not apply a structural or semantic change on typecheck alone.
-- After Tier 1: `tsc --noEmit` (or language equivalent) must pass.
-- After each Tier 2 file: typecheck + scoped tests must pass. On failure: revert the file, classify `(b)`.
+- After Tier 1: the Phase 1 typecheck command must pass.
+- After each Tier 2 file: the Phase 1 typecheck + scoped test commands must pass. On failure: revert the file, classify `(b)`.
 - After Tier 3: full project test suite must pass before handing back.
 
 ## Phase 5: Report
