@@ -211,7 +211,9 @@ install_claude_hook() {
 # Degrades to a hint when the plugin (or the script, in old checkouts) is absent.
 install_xsecurity_engine() {
   [[ -f "$PORT_SRC" ]] || return 0
-  bash "$PORT_SRC"
+  # A port failure must not abort the skills install that already succeeded.
+  bash "$PORT_SRC" \
+    || echo "  ! engine port failed — skills are installed; run scripts/port-claude-security.sh manually"
 }
 
 # Install config to each targeted tool's global home dir.
