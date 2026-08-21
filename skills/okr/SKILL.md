@@ -53,7 +53,7 @@ Bars appear only on the **overall** and **objective** header lines — never per
 
 ### Attainment
 
-- Per KR: `attainment = clamp01((current − baseline) ÷ (target − baseline))`. Direction-agnostic — set `baseline`/`target` correctly and a "decrease latency" KR computes the same way as an "increase revenue" one.
+- Per KR: `attainment = clamp01((current − baseline) ÷ (target − baseline))`. Direction-agnostic — set `baseline`/`target` correctly and a "decrease latency" KR computes the same way as an "increase revenue" one. Baseline must differ from target: equal values mean nothing has to move, which makes it a task, not a KR — route it to the tracker.
 - Per objective: mean of its KR attainments, `dropped` KRs excluded.
 - Overall: mean of objective attainments.
 - Bar: 10 cells `█`/`░`, then percent. Same rendering as the tracker index.

@@ -31,6 +31,8 @@ it is noise. Cut it.
 - **Non-obvious units, ranges, or side effects** the type can't express
   ("returns basis points", "mutates `positions` in place").
 - **`TODO`/`FIXME` with enough context to act on** (who/what/why, not just "fix").
+- **A `Usage:` line in an executable script's module docstring** (invocation,
+  expected exit codes). A script's interface is not restatement of its code.
 
 ## CUT — AI over-production (delete, or never write)
 

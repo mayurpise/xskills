@@ -34,6 +34,7 @@ Long-form **non-code** output (>~20 lines) goes to a file; chat gets a 3-5 bulle
 | Research | `docs/research/` |
 | Plan | `docs/` or `draft/` |
 | Audit | `docs/audit/` |
+| Goals / OKRs | `docs/goals/GOALS.md` — owned by the `okr` skill |
 | Tracker index | `docs/tracker/INDEX.md` |
 | Per-work tracker | `docs/tracker/<slug>.md` |
 
