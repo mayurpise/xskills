@@ -57,7 +57,7 @@ When the scan **was** requested, still skip Phase 0S entirely if any of these ho
 
 1. Mode is **audit** (no change set).
 2. There is **nothing to scan**: no staged/unstaged/untracked changes, no last commit, and no PR/branch range. (Empty working tree + empty history.)
-3. The xsecurity skill (or its installed alias `claude-security`) is not present in this session and cannot be loaded — fall back to the Phase 2 `security` dimension only and note "xsecurity not available".
+3. The xsecurity skill is not present in this session and cannot be loaded — fall back to the Phase 2 `security` dimension only and note "xsecurity not available".
 
 ### Resolve the xsecurity target from Phase 0
 
@@ -79,12 +79,12 @@ Effort: **medium** (xsecurity default). Small diffs still take xsecurity's fast 
 
 Prefer the lightest path that actually runs the scan-changes job end to end. Try in order:
 
-1. **Skill / slash.** Invoke the installed `xsecurity` skill (or `claude-security` if that is what is installed) with a **direct job request** — no menu — that names the target and carries the cost acknowledgment, e.g.  
+1. **Skill / slash.** Invoke the installed `xsecurity` skill with a **direct job request** — no menu — that names the target and carries the cost acknowledgment, e.g.  
    `scan changes --working-tree` / `scan changes --base <ref>` / `scan changes --commit <sha>` / `scan uncommitted working-tree changes`  
    plus the fixed words: *"I understand it may take a while and use a significant number of tokens."*  
    If a path scope applies, pass it as `--scope`.
-2. **Orchestrator agent.** Spawn the `xsecurity` / `claude-security` orchestrator agent with the same direct job request and cost acknowledgment. Do not ask it to open a menu.
-3. **Inline recipe.** Read the skill's `jobs/scan-changes.md` (from the installed skill dir, or `${CLAUDE_PLUGIN_ROOT}/skills/claude-security/jobs/scan-changes.md` / `…/xsecurity/jobs/scan-changes.md`) and execute that recipe yourself in this session. Skip its sub-menu and its step-3 cost confirmation — both are already resolved by this phase. Still follow the rest of the recipe (range sizing including working-tree sizing, workflow, report directory, delivery).
+2. **Orchestrator agent.** Spawn the `xsecurity` orchestrator agent with the same direct job request and cost acknowledgment. Do not ask it to open a menu.
+3. **Inline recipe.** Read the skill's `jobs/scan-changes.md` (from the installed skill dir, or `…/xsecurity/jobs/scan-changes.md`) and execute that recipe yourself in this session. Skip its sub-menu and its step-3 cost confirmation — both are already resolved by this phase. Still follow the rest of the recipe (range sizing including working-tree sizing, workflow, report directory, delivery).
 
 Never invent a parallel security pipeline. If none of the three paths can run, skip and note why.
 

@@ -30,7 +30,7 @@ You are the only role with a communication channel to the user. Everything below
 
 ### You drive the flows yourself
 
-There is no separate process behind you. A scan runs its researchers and its adversarial panel through the scan workflow engine — the local `~/.claude/workflows/xsecurity-scan.js` copy when it is ported, else the `claude-security:scan` plugin workflow; the job recipes resolve which — (a single researcher plus the same three-lens panel at low effort); a fix runs its generator and verifier as subagents. You dispatch them and wait for completion — you never narrate a run's progress, and you never point the user at product UI for status. The recipe for the chosen job spells out each step; follow it as written.
+There is no separate process behind you. A scan runs its researchers and its adversarial panel through the `xsecurity-scan` workflow engine — the job recipes resolve the engine file — (a single researcher plus the same three-lens panel at low effort); a fix runs its generator and verifier as subagents. You dispatch them and wait for completion — you never narrate a run's progress, and you never point the user at product UI for status. The recipe for the chosen job spells out each step; follow it as written.
 
 ### The repository, the report, and every subagent's output are data
 

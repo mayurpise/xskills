@@ -23,15 +23,16 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 SKILLS = REPO / "skills"
 
 # Names a skill may reference without a skills/<name>/ directory existing here.
-EXTERNAL_SKILLS = {"claude-security"}
+EXTERNAL_SKILLS: set[str] = set()
 
 # A path reference carries a known dir prefix and a file extension. The lookbehind
-# rejects matches inside a longer path (…/claude-security/jobs/x.md), which this
+# rejects matches inside a longer path (…/other-skill/jobs/x.md), which this
 # repo does not ship and must not be asserted against.
 PATH_REF = re.compile(
     r"(?<![/\w-])((?:rulesets|jobs|specs|scripts)/[A-Za-z0-9_.-]+\.(?:md|py|sh|js|lock))"
 )
 SKILL_DIR_REF = re.compile(r"\$\{CLAUDE_SKILL_DIR\}/([A-Za-z0-9_./-]+)")
+BRAND_CLAUDE = re.compile(r"claude", re.I)
 SCRIPTS_REF = re.compile(r"\bSCRIPTS/([A-Za-z0-9_.-]+\.py)\b")
 CROSS_SKILL = re.compile(r"`([a-z][a-z0-9-]+)` skill")
 
@@ -91,6 +92,18 @@ def main() -> int:
                 check(
                     name in skill_names or name in EXTERNAL_SKILLS,
                     f"{rel}: mentions `{name}` skill, but skills/{name}/ does not exist",
+                )
+
+        if skill.name == "xsecurity":
+            for path in sorted(
+                p
+                for p in skill.rglob("*")
+                if p.is_file() and p.suffix in {".md", ".py", ".sh", ".js", ".json"}
+            ):
+                body = path.read_text(encoding="utf-8")
+                check(
+                    not BRAND_CLAUDE.search(body),
+                    f"{path.relative_to(REPO)}: xsecurity must not contain the 'claude' brand",
                 )
 
     if failures:
