@@ -52,14 +52,40 @@ fi
 
 echo "PASS: install.sh argument parsing"
 
-# --- Claude-only skills stay out of other tools' skill dirs ---
+# --- Workflow-host skills: Grok and Claude get xsecurity; Cursor does not ---
 HOME="$fake_home" "$repo/install.sh" --cursor >/dev/null
 [[ -d "$fake_home/.cursor/skills/scrub" ]] \
   || fail "cursor install missing a portable skill (scrub)"
 [[ -e "$fake_home/.cursor/skills/xsecurity" ]] \
-  && fail "cursor install shipped the Claude-only xsecurity skill"
+  && fail "cursor install shipped xsecurity (needs Workflow + AskUserQuestion)"
 
-echo "PASS: Claude-only skills are skipped for non-Claude tools"
+grok_home="$fake_home/grok-only"; mkdir -p "$grok_home"
+HOME="$grok_home" "$repo/install.sh" --grok >/dev/null
+[[ -d "$grok_home/.grok/skills/scrub" ]] \
+  || fail "grok install missing a portable skill (scrub)"
+[[ -d "$grok_home/.grok/skills/xsecurity" ]] \
+  || fail "grok install missing xsecurity"
+[[ -e "$grok_home/.claude/skills/xsecurity" ]] \
+  && fail "--grok leaked skills into ~/.claude"
+
+all_home="$fake_home/all-tools"; mkdir -p "$all_home"
+HOME="$all_home" "$repo/install.sh" --all >/dev/null
+[[ -d "$all_home/.grok/skills/xsecurity" ]] \
+  || fail "--all did not install xsecurity for grok"
+[[ -d "$all_home/.claude/skills/xsecurity" ]] \
+  || fail "--all did not install xsecurity for claude"
+[[ -e "$all_home/.cursor/skills/xsecurity" ]] \
+  && fail "--all shipped xsecurity to cursor"
+
+echo "PASS: xsecurity installs for grok and claude, not cursor"
+
+# grok-only --config <dir> writes AGENTS.md (Grok's project rules file)
+grok_proj="$fake_home/grok-proj"
+HOME="$fake_home" "$repo/install.sh" --grok --config "$grok_proj" >/dev/null
+[[ -f "$grok_proj/AGENTS.md" ]] || fail "--grok --config <dir> did not write AGENTS.md"
+[[ -e "$grok_proj/CLAUDE.md" ]] && fail "--grok --config <dir> wrote CLAUDE.md"
+
+echo "PASS: grok project config writes AGENTS.md only"
 
 # --- piped install (curl | bash) must fetch xskills, never install $PWD ---
 # Read from stdin the script has no path, so a $PWD-based root resolution silently

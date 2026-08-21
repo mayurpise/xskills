@@ -4,7 +4,7 @@
 [![GitHub forks](https://img.shields.io/github/forks/mayurpise/xskills?style=flat-square)](https://github.com/mayurpise/xskills/network/members)
 [![GitHub last commit](https://img.shields.io/github/last-commit/mayurpise/xskills?style=flat-square)](https://github.com/mayurpise/xskills/commits/main)
 
-AI coding tool configs that reduce wasted tokens and prevent scope creep. Works with Claude Code, Cursor, and GitHub Copilot.
+AI coding tool configs that reduce wasted tokens and prevent scope creep. Works with Claude Code, Grok, Cursor, and GitHub Copilot.
 
 ## What's included
 
@@ -29,7 +29,7 @@ AI coding tool configs that reduce wasted tokens and prevent scope creep. Works 
 ./install.sh --config
 ```
 
-That's it. One command installs every skill under `skills/` and copies the agent instructions (`AGENTS.md`) to the global config dir of every tool it detects (`~/.claude/`, `~/.cursor/`, `~/.copilot/`).
+That's it. One command installs every skill under `skills/` and copies the agent instructions (`AGENTS.md`) to the global config dir of every tool it detects (`~/.claude/`, `~/.cursor/`, `~/.copilot/`). Grok skills go to `~/.grok/skills/`; `--config` without a dir skips Grok (it reads the repo `AGENTS.md`); `--config <dir>` writes that project's `AGENTS.md`.
 
 **Other options:**
 
@@ -39,9 +39,10 @@ That's it. One command installs every skill under `skills/` and copies the agent
 
 # Target a specific tool (skill only)
 ./install.sh --claude     # Claude Code
+./install.sh --grok       # Grok
 ./install.sh --cursor     # Cursor
 ./install.sh --copilot    # GitHub Copilot
-./install.sh --all        # all three
+./install.sh --all        # all four
 
 # Skills + config for all tools (same as --config alone)
 ./install.sh --all --config
@@ -61,7 +62,7 @@ there, and deletes it. Every flag above works the same way — put it after `--`
 with `XSKILLS_TARBALL=https://github.com/mayurpise/xskills/archive/<sha>.tar.gz`. A clone is
 still needed for `scripts/sync-upstream.sh` and the `pre-push` hook.
 
-Tools are detected by their config dir (`~/.claude`, `~/.cursor`, `~/.copilot`), which each tool
+Tools are detected by their config dir (`~/.claude`, `~/.grok`, `~/.cursor`, `~/.copilot`), which each tool
 creates on its first run. On a machine where none has been launched yet there is nothing to
 detect — name the tools instead:
 

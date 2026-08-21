@@ -1,6 +1,6 @@
 # xskills
 
-AI coding tool configs that reduce wasted tokens and prevent scope creep — for Claude Code, Cursor, and GitHub Copilot.
+AI coding tool configs that reduce wasted tokens and prevent scope creep — for Claude Code, Grok, Cursor, and GitHub Copilot.
 
 ## Install
 
@@ -16,7 +16,7 @@ Or without cloning — the script fetches the repo into a temp dir and installs 
 curl -fsSL https://raw.githubusercontent.com/mayurpise/xskills/main/install.sh | bash -s -- --config
 ```
 
-Tools are detected by their config dir (`~/.claude`, `~/.cursor`, `~/.copilot`). If none has been
+Tools are detected by their config dir (`~/.claude`, `~/.grok`, `~/.cursor`, `~/.copilot`). If none has been
 launched yet there is nothing to detect — swap `--config` for `--all --config`.
 
 See the [repo](https://github.com/mayurpise/xskills) for all options.

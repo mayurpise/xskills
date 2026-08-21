@@ -8,11 +8,12 @@
 #   ./install.sh                        # skills for detected tools
 #   ./install.sh --cursor               # skills for Cursor only
 #   ./install.sh --claude               # skills for Claude Code only
+#   ./install.sh --grok                 # skills for Grok only
 #   ./install.sh --copilot              # skills for GitHub Copilot only
-#   ./install.sh --all                  # skills for all three tools (forced, no detection)
+#   ./install.sh --all                  # skills for all four tools (forced, no detection)
 #   ./install.sh --config               # skills + global config for detected tools
 #   ./install.sh --config <dir>         # config into a project dir ONLY (no global skills)
-#   ./install.sh --all --config         # skills + global config for all three tools
+#   ./install.sh --all --config         # skills + global config for all four tools
 #   ./install.sh -h | --help            # show usage
 #   no clone; flags go after `--`:
 #   curl -fsSL https://raw.githubusercontent.com/mayurpise/xskills/main/install.sh | bash -s -- --config
@@ -24,9 +25,10 @@
 #   Claude Code  → ~/.claude/CLAUDE.md
 #   Cursor       → ~/.cursor/rules/project.mdc
 #   Copilot      → project-level only; supply a dir
+#   Grok         → project-level AGENTS.md; supply a dir (Grok also reads the repo file)
 #   AGENTS.md    → project-level only; supply a dir
 #
-# NOTE: "skills" (SKILL.md) are primarily a Claude Code construct. The Cursor and
+# NOTE: "skills" (SKILL.md) are a Claude Code and Grok construct. The Cursor and
 # Copilot skill dirs are best-effort; verify those tools actually consume SKILL.md
 # before relying on them. The Cursor global rules path below is likewise best-effort.
 #
@@ -63,12 +65,12 @@ fi
 # Per-tool skills install roots
 CURSOR_SKILLS_ROOT="$HOME/.cursor/skills"
 CLAUDE_SKILLS_ROOT="$HOME/.claude/skills"
+GROK_SKILLS_ROOT="$HOME/.grok/skills"
 COPILOT_SKILLS_ROOT="$HOME/.copilot/skills"
 
-# Skills that depend on Claude Code-only features (allowed-tools, the Workflow and
-# AskUserQuestion tools, ${CLAUDE_SKILL_DIR} preprocessing) — inert in other tools,
-# so they are installed only for Claude.
-CLAUDE_ONLY_SKILLS=(xsecurity)
+# Skills that need Workflow + AskUserQuestion — installed for Claude Code and Grok;
+# skipped for Cursor and Copilot, where those tools are absent.
+WORKFLOW_HOST_SKILLS=(xsecurity)
 
 # Global config install paths
 CURSOR_CONFIG="$HOME/.cursor/rules/project.mdc"
@@ -143,8 +145,9 @@ install_skills_to_root() {
   for skill_dir in "$SKILLS_DIR"/*/; do
     local name; name="$(basename "$skill_dir")"
     [[ -f "$skill_dir$SKILL_FILE" ]] || continue   # a skill dir must have SKILL.md
-    if [[ "$tool" != "Claude Code" ]] && has "$name" "${CLAUDE_ONLY_SKILLS[@]}"; then
-      echo "  - skill  $tool/$name skipped (Claude Code-only)"
+    if has "$name" "${WORKFLOW_HOST_SKILLS[@]}" \
+       && [[ "$tool" != "Claude Code" && "$tool" != "Grok" ]]; then
+      echo "  - skill  $tool/$name skipped (needs Workflow + AskUserQuestion)"
       continue
     fi
     # Install every file under the skill dir (SKILL.md plus bundled resources such
@@ -227,6 +230,9 @@ install_config_global() {
   if has copilot "$@"; then
     echo "  ! config Copilot    → project-level only; use --config <dir>"
   fi
+  if has grok "$@"; then
+    echo "  ! config Grok       → project-level AGENTS.md; use --config <dir>"
+  fi
 }
 
 # Install config into a specific project directory for each targeted tool.
@@ -235,6 +241,8 @@ install_config_project() {
   mkdir -p "$dir"
   if has claude "$@"; then
     install_file "$AGENTS_SRC" "$dir/CLAUDE.md"  "config Claude Code" backup
+    install_file "$AGENTS_SRC" "$dir/AGENTS.md" "config AGENTS.md" backup
+  elif has grok "$@"; then
     install_file "$AGENTS_SRC" "$dir/AGENTS.md" "config AGENTS.md" backup
   fi
   if has cursor "$@"; then
@@ -246,13 +254,14 @@ install_config_project() {
 }
 
 # --- parse args ---
-do_cursor=0; do_claude=0; do_copilot=0; do_all=0
+do_cursor=0; do_claude=0; do_grok=0; do_copilot=0; do_all=0
 do_config=0; config_dir=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --cursor)  do_cursor=1 ;;
     --claude)  do_claude=1 ;;
+    --grok)    do_grok=1 ;;
     --copilot) do_copilot=1 ;;
     --all)     do_all=1 ;;
     -h|--help) print_usage; exit 0 ;;
@@ -276,20 +285,22 @@ done
 # --- resolve target tools (explicit > --all > detection) ---
 tools=()
 if [[ $do_all -eq 1 ]]; then
-  tools=(cursor claude copilot)
-elif [[ $(( do_cursor + do_claude + do_copilot )) -gt 0 ]]; then
+  tools=(cursor claude grok copilot)
+elif [[ $(( do_cursor + do_claude + do_grok + do_copilot )) -gt 0 ]]; then
   [[ $do_cursor  -eq 1 ]] && tools+=(cursor)
   [[ $do_claude  -eq 1 ]] && tools+=(claude)
+  [[ $do_grok    -eq 1 ]] && tools+=(grok)
   [[ $do_copilot -eq 1 ]] && tools+=(copilot)
 else
-  [[ -d "$HOME/.cursor" ]]         && tools+=(cursor)
-  [[ -d "$HOME/.claude" ]]         && tools+=(claude)
+  [[ -d "$HOME/.cursor" ]]  && tools+=(cursor)
+  [[ -d "$HOME/.claude" ]]  && tools+=(claude)
+  [[ -d "$HOME/.grok" ]]    && tools+=(grok)
   [[ -d "$HOME/.copilot" ]] && tools+=(copilot)
 fi
 
 if [[ ${#tools[@]} -eq 0 ]]; then
-  echo "No supported tools detected — none of ~/.claude, ~/.cursor, ~/.copilot exists yet."
-  echo "Name the tools explicitly with --cursor, --claude, --copilot, or --all:"
+  echo "No supported tools detected — none of ~/.claude, ~/.grok, ~/.cursor, ~/.copilot exists yet."
+  echo "Name the tools explicitly with --cursor, --claude, --grok, --copilot, or --all:"
   echo "  ./install.sh --all --config"
   echo "  curl -fsSL https://raw.githubusercontent.com/mayurpise/xskills/main/install.sh | bash -s -- --all --config"
   exit 1
@@ -304,6 +315,7 @@ else
     case "$tool" in
       cursor)  install_skills_to_root "$CURSOR_SKILLS_ROOT"  "Cursor" ;;
       claude)  install_skills_to_root "$CLAUDE_SKILLS_ROOT"  "Claude Code"; install_claude_hook; install_xsecurity_engine ;;
+      grok)    install_skills_to_root "$GROK_SKILLS_ROOT"    "Grok" ;;
       copilot) install_skills_to_root "$COPILOT_SKILLS_ROOT" "GitHub Copilot" ;;
     esac
   done
