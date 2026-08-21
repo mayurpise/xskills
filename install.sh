@@ -74,6 +74,11 @@ CLAUDE_SETTINGS="$HOME/.claude/settings.json"
 HOOK_SRC="$SCRIPT_DIR/hooks/work-tracker-sessionstart.sh"
 HOOK_DEST="$HOME/.claude/hooks/work-tracker-sessionstart.sh"
 
+# xsecurity scan engine (Claude only): derived on this machine from the user's
+# installed claude-security plugin — its license permits internal-use modification
+# but not redistribution, so the engine is never shipped in this repo.
+PORT_SRC="$SCRIPT_DIR/scripts/port-claude-security.sh"
+
 CURSOR_FRONTMATTER='---\ndescription: Project-level coding and agent guidelines\nalwaysApply: true\n---\n\n'
 
 # Print the Usage block from this file's header. Matched by pattern, not line
@@ -193,6 +198,13 @@ install_claude_hook() {
   fi
 }
 
+# Derive the xsecurity scan engine from the installed claude-security plugin.
+# Degrades to a hint when the plugin (or the script, in old checkouts) is absent.
+install_xsecurity_engine() {
+  [[ -f "$PORT_SRC" ]] || return 0
+  bash "$PORT_SRC"
+}
+
 # Install config to each targeted tool's global home dir.
 install_config_global() {
   if has claude "$@"; then
@@ -280,7 +292,7 @@ else
   for tool in "${tools[@]}"; do
     case "$tool" in
       cursor)  install_skills_to_root "$CURSOR_SKILLS_ROOT"  "Cursor" ;;
-      claude)  install_skills_to_root "$CLAUDE_SKILLS_ROOT"  "Claude Code"; install_claude_hook ;;
+      claude)  install_skills_to_root "$CLAUDE_SKILLS_ROOT"  "Claude Code"; install_claude_hook; install_xsecurity_engine ;;
       copilot) install_skills_to_root "$COPILOT_SKILLS_ROOT" "GitHub Copilot" ;;
     esac
   done
